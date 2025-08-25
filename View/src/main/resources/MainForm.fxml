@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="progkom.controller.MainFormController" stylesheets="@styles.css">
+    <center>
+        <VBox spacing="15" alignment="CENTER">
+
+            <Label text="Game of Life - Configuration" styleClass="header-label" />
+
+            <HBox spacing="10" alignment="CENTER">
+                <Label text="%size.label" />
+                <TextField fx:id="sizeInput" promptText="Enter size (4-14)" styleClass="text-field" />
+            </HBox>
+
+            <HBox spacing="10" alignment="CENTER">
+                <Label text="%density.label"/>
+                <ComboBox fx:id="fillLevelCombo" styleClass="combo-box" />
+            </HBox>
+
+            <HBox spacing="10" alignment="CENTER">
+                <Label text="%language.label" />
+                <ComboBox fx:id="languageSelector" styleClass="combo-box">
+                    <items>
+                        <FXCollections fx:factory="observableArrayList">
+                            <String fx:value="English" />
+                            <String fx:value="Polski" />
+                        </FXCollections>
+                    </items>
+                </ComboBox>
+            </HBox>
+
+            <Button fx:id="startButton" text="Start Simulation" styleClass="button" />
+        </VBox>
+    </center>
+</BorderPane>

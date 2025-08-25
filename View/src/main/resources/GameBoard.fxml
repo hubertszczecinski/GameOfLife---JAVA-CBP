@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.canvas.*?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml" fx:controller="progkom.controller.GameBoardController" stylesheets="@styles.css">
+    <center>
+        <Canvas fx:id="gameCanvas" width="600" height="600" styleClass="canvas" />
+    </center>
+    <bottom>
+        <HBox spacing="15" alignment="CENTER" styleClass="bottom-bar">
+            <Button fx:id="nextStepButton" text="%nextStep.button" styleClass="button" />
+            <Button fx:id="resetButton" text="%reset.button" styleClass="button" />
+            <Button text="%save.button" onAction="#saveBoard" styleClass="button" />
+            <Button text="%load.button" onAction="#loadBoard" styleClass="button" />
+            <Button text="%saveDb.button" onAction="#saveBoardToDb" styleClass="button" />
+            <Button text="%loadDb.button" onAction="#loadBoardFromDb" styleClass="button" />
+        </HBox>
+    </bottom>
+</BorderPane>
