@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.example</groupId>
-    <artifactId>GameOfLifeKlim</artifactId>
+    <artifactId>GameOfLife</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
@@ -90,7 +90,7 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.3.1</version>
                 <configuration>
-                    <configLocation>checkstyle2023.xml</configLocation>
+                    <configLocation>Model/checkstyle2023.xml</configLocation>
                 </configuration>
                 <executions>
                     <execution>
@@ -155,20 +155,12 @@
 
     <developers>
         <developer>
-            <id>253833</id>
-            <name>Klim Hudzenko</name>
-            <email>253833@edu.p.lodz.pl</email>
-        </developer>
-        <developer>
             <id>251641</id>
             <name>Hubert Szczeciński</name>
             <email>251641@edu.p.lodz.pl</email>
         </developer>
     </developers>
 
-    <description>
-        Projekt grupy laboratoryjnej jm_cz_1345
-    </description>
 
     <reporting>
         <plugins>
@@ -182,7 +174,7 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.3.1</version>
                 <configuration>
-                    <configLocation>checkstyle2023.xml</configLocation>
+                    <configLocation>Model/checkstyle2023.xml</configLocation>
                     <inputEncoding>UTF-8</inputEncoding>
                     <consoleOutput>true</consoleOutput>
                     <linkXRef>false</linkXRef>

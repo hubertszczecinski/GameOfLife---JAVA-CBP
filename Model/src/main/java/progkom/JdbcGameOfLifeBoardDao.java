@@ -14,18 +14,36 @@ public class JdbcGameOfLifeBoardDao implements Dao<GameOfLifeBoard> {
     private final String boardName;
     private static final Logger logger = LoggerFactory.getLogger(JdbcGameOfLifeBoardDao.class);
 
+    static {
+        try {
+            // Jawna rejestracja drivera PostgreSQL dla Java 21+
+            Class.forName("org.postgresql.Driver");
+            logger.info("PostgreSQL driver załadowany pomyślnie");
+        } catch (ClassNotFoundException e) {
+            logger.error("Nie udało się załadować drivera PostgreSQL", e);
+            throw new RuntimeException("PostgreSQL driver nie został znaleziony", e);
+        }
+    }
+
     public JdbcGameOfLifeBoardDao(String url, String user, String password, String boardName) {
         this.url = url;
         this.user = user;
         this.password = password;
         this.boardName = boardName;
+        logger.debug("Utworzono JdbcGameOfLifeBoardDao dla planszy: {}, URL: {}", boardName, url);
+    }
+
+    private Connection getConnection() throws SQLException {
+        String connectionUrl = url + "?connectTimeout=5&socketTimeout=10";
+        logger.debug("Próba połączenia z bazą: {}", connectionUrl);
+        return DriverManager.getConnection(connectionUrl, user, password);
     }
 
     @Override
     public GameOfLifeBoard read() {
         GameOfLifeBoard board = null;
         logger.info("Laczenie z baza danych");
-        try (Connection conn = DriverManager.getConnection(url, user, password)) {
+        try (Connection conn = getConnection()) {
             int boardId = 0;
 
             logger.info("Pobieranie danych o planszy");
@@ -65,8 +83,9 @@ public class JdbcGameOfLifeBoardDao implements Dao<GameOfLifeBoard> {
 
         logger.info("Pomyslnie wczytano dane o planszy i jej komorkach");
         } catch (SQLException e) {
-            logger.error("Nie udalo sie polaczyc z baza danych");
-            throw new DatabaseOperationException("database.error.connection_failure", e);
+            logger.error("Nie udalo sie polaczyc z baza danych. URL: {}, User: {}, Error: {}",
+                    url, user, e.getMessage(), e);
+            throw new DatabaseOperationException("database.error.connection_failure: " + e.getMessage(), e);
         }
         return board;
     }
@@ -74,61 +93,93 @@ public class JdbcGameOfLifeBoardDao implements Dao<GameOfLifeBoard> {
     @Override
     public void write(GameOfLifeBoard board) {
         logger.info("Laczenie z baza danych");
-        try (Connection conn = DriverManager.getConnection(url, user, password)) {
+        try (Connection conn = getConnection()) {
             logger.info("Zapisywanie planszy do bazy danych");
             conn.setAutoCommit(false);
 
-            logger.info("Sprawdzanie unikalnosci nazwy planszy");
+            logger.info("Sprawdzanie czy plansza juz istnieje");
+            int boardId = -1;
+            boolean boardExists = false;
             try (PreparedStatement statement = conn.prepareStatement(
                     "SELECT id FROM board WHERE name = ?;")) {
                 statement.setString(1, boardName);
                 try (ResultSet boardSet = statement.executeQuery()) {
                     if (boardSet.next()) {
-                        conn.rollback();
-                        logger.error("Plansza nie jest unikalna");
-                        throw new DatabaseOperationException("database.error.board.exists");
+                        boardId = boardSet.getInt(1);
+                        boardExists = true;
+                        logger.info("Plansza juz istnieje, bedzie zaktualizowana");
                     }
                 }
             } catch (SQLException e) {
                 conn.rollback();
-                logger.error("Nie udalo sie sprawdzic unikalnosci nazwy planszy");
+                logger.error("Nie udalo sie sprawdzic czy plansza istnieje");
                 throw new DatabaseOperationException("database.error.board_selection_failure", e);
             }
 
-            logger.info("Dodawanie nowej planszy");
-            try (PreparedStatement statement = conn.prepareStatement(
-                    "INSERT INTO board (name, rows, columns) VALUES (?, ?, ?);")) {
-                statement.setString(1, boardName);
-                statement.setInt(2, board.getRows());
-                statement.setInt(3, board.getColumns());
-                statement.executeUpdate();
-            } catch (SQLException e) {
-                conn.rollback();
-                logger.error("Nie udalo sie dodac nowej planszy");
-                throw new DatabaseOperationException("database.error.board_add_failure", e);
-            }
-
-            logger.info("Pobieranie indeksu dodanej planszy");
-            int boardId;
-            try (PreparedStatement statement = conn.prepareStatement(
-                    "SELECT id FROM board WHERE name = ?;")) {
-                statement.setString(1, boardName);
-                try (ResultSet idSet = statement.executeQuery()) {
-                    if (idSet.next()) {
-                        boardId = idSet.getInt(1);
-                    } else {
-                        conn.rollback();
-                        logger.error("Plansza o podanym indeksie nie istnieje");
-                        throw new DatabaseOperationException("database.error.board_id_not_exists");
-                    }
+            if (boardExists) {
+                // Aktualizacja istniejącej planszy
+                logger.info("Aktualizowanie istniejącej planszy");
+                try (PreparedStatement statement = conn.prepareStatement(
+                        "UPDATE board SET rows = ?, columns = ? WHERE id = ?;")) {
+                    statement.setInt(1, board.getRows());
+                    statement.setInt(2, board.getColumns());
+                    statement.setInt(3, boardId);
+                    statement.executeUpdate();
+                } catch (SQLException e) {
+                    conn.rollback();
+                    logger.error("Nie udalo sie zaktualizowac planszy");
+                    throw new DatabaseOperationException("database.error.board_update_failure", e);
                 }
-            } catch (SQLException e) {
-                conn.rollback();
-                logger.error("Nie udalo pobrac indeksu nowej planszy");
-                throw new DatabaseOperationException("database.error.board_id_failure", e);
+
+                // Usunięcie starych komórek
+                logger.info("Usuwanie starych komorek planszy");
+                try (PreparedStatement statement = conn.prepareStatement(
+                        "DELETE FROM cell WHERE board_id = ?;")) {
+                    statement.setInt(1, boardId);
+                    statement.executeUpdate();
+                } catch (SQLException e) {
+                    conn.rollback();
+                    logger.error("Nie udalo sie usunac starych komorek");
+                    throw new DatabaseOperationException("database.error.cells_delete_failure", e);
+                }
+            } else {
+                // Dodanie nowej planszy
+                logger.info("Dodawanie nowej planszy");
+                try (PreparedStatement statement = conn.prepareStatement(
+                        "INSERT INTO board (name, rows, columns) VALUES (?, ?, ?);")) {
+                    statement.setString(1, boardName);
+                    statement.setInt(2, board.getRows());
+                    statement.setInt(3, board.getColumns());
+                    statement.executeUpdate();
+                } catch (SQLException e) {
+                    conn.rollback();
+                    logger.error("Nie udalo sie dodac nowej planszy");
+                    throw new DatabaseOperationException("database.error.board_add_failure", e);
+                }
+
+                // Pobranie ID nowo dodanej planszy
+                logger.info("Pobieranie indeksu dodanej planszy");
+                try (PreparedStatement statement = conn.prepareStatement(
+                        "SELECT id FROM board WHERE name = ?;")) {
+                    statement.setString(1, boardName);
+                    try (ResultSet idSet = statement.executeQuery()) {
+                        if (idSet.next()) {
+                            boardId = idSet.getInt(1);
+                        } else {
+                            conn.rollback();
+                            logger.error("Plansza o podanym indeksie nie istnieje");
+                            throw new DatabaseOperationException("database.error.board_id_not_exists");
+                        }
+                    }
+                } catch (SQLException e) {
+                    conn.rollback();
+                    logger.error("Nie udalo pobrac indeksu nowej planszy");
+                    throw new DatabaseOperationException("database.error.board_id_failure", e);
+                }
             }
 
-            logger.info("Dodawanie komorek nowo dodanej planszy do bazy danych");
+            // Dodanie komórek
+            logger.info("Dodawanie komorek planszy do bazy danych");
             try (PreparedStatement statement = conn.prepareStatement(
                     "INSERT INTO cell (x, y, value, board_id)"
                         + "VALUES (?, ?, ?, ?);")) {
@@ -143,21 +194,22 @@ public class JdbcGameOfLifeBoardDao implements Dao<GameOfLifeBoard> {
                 }
             } catch (SQLException e) {
                 conn.rollback();
-                logger.error("Blad podczas dodawania komorek nowej planszy do bazy danych");
+                logger.error("Blad podczas dodawania komorek planszy do bazy danych");
                 throw new DatabaseOperationException("database.error.cells_add_failure", e);
             }
 
             conn.commit();
-            logger.info("Pomyslnie dodano nowa plansze wraz z komorkami");
+            logger.info("Pomyslnie zapisano plansze wraz z komorkami");
         } catch (SQLException e) {
-            logger.error("Nie udalo sie polaczyc z baza danych");
-            throw new DatabaseOperationException("database.error.connection_failure", e);
+            logger.error("Nie udalo sie polaczyc z baza danych. URL: {}, User: {}, Error: {}",
+                    url, user, e.getMessage(), e);
+            throw new DatabaseOperationException("database.error.connection_failure: " + e.getMessage(), e);
         }
     }
 
     public List<String> names() throws DatabaseOperationException {
         logger.info("Laczenie z baza danych");
-        try (Connection conn = DriverManager.getConnection(url, user, password);
+        try (Connection conn = getConnection();
              PreparedStatement statement = conn.prepareStatement(
                      "SELECT name FROM board;");
              ResultSet boardsSet = statement.executeQuery()) {
@@ -170,8 +222,9 @@ public class JdbcGameOfLifeBoardDao implements Dao<GameOfLifeBoard> {
 
             return names;
         } catch (SQLException e) {
-            logger.error("Nie udalo sie polaczyc z baza danych");
-            throw new DatabaseOperationException("database.error.connection_failure", e);
+            logger.error("Nie udalo sie polaczyc z baza danych. URL: {}, User: {}, Error: {}",
+                    url, user, e.getMessage(), e);
+            throw new DatabaseOperationException("database.error.connection_failure: " + e.getMessage(), e);
         }
     }
 

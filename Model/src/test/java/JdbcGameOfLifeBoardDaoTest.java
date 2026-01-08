@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class JdbcGameOfLifeBoardDaoTest {
     @BeforeEach
     public void setUp() throws Exception {
-        try (Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/gol", "nbd", "nbdpassword");
+        try (Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/nbddb", "nbd", "nbdpassword");
              PreparedStatement statement = conn.prepareStatement(
                      "TRUNCATE TABLE board, cell;")) {
             statement.executeUpdate();

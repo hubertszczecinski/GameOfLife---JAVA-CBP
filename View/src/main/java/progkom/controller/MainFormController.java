@@ -41,7 +41,7 @@ public class MainFormController {
         this.primaryStage = primaryStage;
         this.locale = locale;
 
-        languageSelector.getItems().addAll();
+        // Ustawienie domyślnego języka (elementy są już zdefiniowane w FXML)
         languageSelector.setValue(locale.getLanguage().equals("pl") ? "Polski" : "English");
 
         languageSelector.setOnAction(event -> onLanguageChange(primaryStage));

@@ -6,7 +6,7 @@
 
     <parent>
         <groupId>org.example</groupId>
-        <artifactId>GameOfLifeKlim</artifactId>
+        <artifactId>GameOfLife</artifactId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
@@ -33,15 +33,7 @@
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
-                <version>0.0.7</version>
-                <executions>
-                    <execution>
-                        <id>default-cli</id>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                    </execution>
-                </executions>
+                <version>0.0.8</version>
                 <configuration>
                     <mainClass>progkom.MainApp</mainClass>
                 </configuration>
@@ -52,6 +44,14 @@
                 <version>3.13.0</version>
                 <configuration>
                     <release>${java.version}</release>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>progkom.MainApp</mainClass>
                 </configuration>
             </plugin>
         </plugins>

@@ -3,6 +3,7 @@ package progkom.controller;
 import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.ComboBox;
@@ -81,11 +82,20 @@ public class GameBoardController {
         Optional<String> result = dialog.showAndWait();
 
         result.ifPresent(boardName -> {
-            try (Dao<GameOfLifeBoard> dao = GameOfLifeBoardDaoFactory.createJdbcDao(boardName)) {
+            if (boardName == null || boardName.trim().isEmpty()) {
+                showErrorAlert("Błąd", "Nazwa planszy nie może być pusta.");
+                return;
+            }
+            try (Dao<GameOfLifeBoard> dao = GameOfLifeBoardDaoFactory.createJdbcDao(boardName.trim())) {
                 dao.write(board);
                 LOGGER.log(Level.INFO, "Board saved to database successfully.");
+                showSuccessAlert("Sukces", "Plansza została zapisana do bazy danych: " + boardName.trim());
+            } catch (DatabaseOperationException e) {
+                LOGGER.log(Level.SEVERE, "Failed to save board to database.", e);
+                showErrorAlert("Błąd zapisu", "Nie udało się zapisać planszy do bazy danych.\n" + e.getMessage());
             } catch (Exception e) {
                 LOGGER.log(Level.SEVERE, "Failed to save board to database.", e);
+                showErrorAlert("Błąd", "Wystąpił nieoczekiwany błąd podczas zapisu:\n" + e.getMessage());
             }
         });
     }
@@ -99,6 +109,7 @@ public class GameBoardController {
             List<String> boardNames = namesDao.names();
             if (boardNames.isEmpty()) {
                 LOGGER.log(Level.WARNING, "No boards available in the database.");
+                showInfoAlert("Informacja", "Brak plansz w bazie danych.");
                 return;
             }
 
@@ -115,14 +126,26 @@ public class GameBoardController {
                 try (JdbcGameOfLifeBoardDao readingDao =
                              (JdbcGameOfLifeBoardDao) GameOfLifeBoardDaoFactory.createJdbcDao(boardName)) {
                     board = readingDao.read();
+                    drawBoard();
+                    LOGGER.log(Level.INFO, "Board loaded successfully.");
+                    showSuccessAlert("Sukces", "Plansza została wczytana z bazy danych: " + boardName);
+                } catch (DatabaseOperationException e) {
+                    LOGGER.log(Level.SEVERE, "Failed to load board from database.", e);
+                    showErrorAlert("Błąd wczytywania",
+                            "Nie udało się wczytać planszy z bazy danych.\n" + e.getMessage());
+                } catch (Exception e) {
+                    LOGGER.log(Level.SEVERE, "Failed to load board from database.", e);
+                    showErrorAlert("Błąd", "Wystąpił nieoczekiwany błąd podczas wczytywania:\n" + e.getMessage());
                 }
-                drawBoard();
-                LOGGER.log(Level.INFO, "Board loaded successfully.");
             } else {
                 LOGGER.log(Level.INFO, "Board loading cancelled by user.");
             }
+        } catch (DatabaseOperationException e) {
+            LOGGER.log(Level.SEVERE, "Failed to load board from database.", e);
+            showErrorAlert("Błąd połączenia", "Nie udało się połączyć z bazą danych.\n" + e.getMessage());
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to load board from database.", e);
+            showErrorAlert("Błąd", "Wystąpił nieoczekiwany błąd:\n" + e.getMessage());
         }
     }
 
@@ -173,5 +196,29 @@ public class GameBoardController {
         board.clear();
         LOGGER.log(Level.INFO, "Board reset.");
         drawBoard();
+    }
+
+    private void showErrorAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    private void showSuccessAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    private void showInfoAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }

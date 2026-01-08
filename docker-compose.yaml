@@ -1,15 +1,15 @@
-# psql --dbname=nbddb --username=nbd
-
 services:
   pgadmin:
     image: dpage/pgadmin4:8.12
     environment:
-      PGADMIN_DEFAULT_EMAIL: "marcin.kwapisz@p.lodz.pl"
+      PGADMIN_DEFAULT_EMAIL: "andrzej.trawnik@p.lodz.pl"
       PGADMIN_DEFAULT_PASSWORD: "pgadmin"
     ports:
       - "80:80"
     volumes:
       - pgadmin:/var/lib/pgadmin
+    depends_on:
+      - db
   db:
     image: postgres:17
     restart: always
@@ -21,6 +21,12 @@ services:
       - "5432:5432"
     volumes:
       - pg:/var/lib/postgresql/data
+      - ./docker-init/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nbd -d nbddb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 volumes:
   pg:
   pgadmin:
