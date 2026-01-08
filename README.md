@@ -1,4 +1,4 @@
-# 🎮 Game of Life
+# Game of Life
 
 Implementation of the classic Game of Life in Java with JavaFX GUI and PostgreSQL database support.
 
@@ -11,11 +11,11 @@ Implementation of the classic Game of Life in Java with JavaFX GUI and PostgreSQ
   <p><em>Game of Life simulation</em></p>
 </div>
 
-## 🎬 Demo
+## Demo
 
 📹 [Watch video](ss/Nagranie%20z%20ekranu%202026-01-8%20o%2012.35.16.mov)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Requirements
 - Java 21+
@@ -35,7 +35,7 @@ mvn -pl View exec:java
 docker-compose up -d
 ```
 
-## ✨ Features
+## Features
 
 -  Interactive Game of Life simulation
 -  Board editing (click cells to toggle)
